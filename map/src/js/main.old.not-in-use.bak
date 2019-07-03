@@ -1,0 +1,199 @@
+var DATA_FILE_NAME = 'data/program2.csv';
+
+var zipFilterArray = [];
+startup();
+function startup() {
+  console.log('%c startup called, loading csv to parse zips etc', '#999');
+
+  $.ajax({
+    url: DATA_FILE_NAME,
+    type: 'GET',
+    dataType: 'text',
+    success: function (result) {
+      // var dataStr =  csvJSON(result);
+      // var data = eval(dataStr);
+      var data = $.csv.toObjects(result);
+      processDataAndLoadMap(data);
+
+    }
+  });
+}
+
+function processDataAndLoadMap(data) {
+  var dataIndex = buildPropertyValueMap(data, ['zip', 'contract_type', 'model_type', 'summer_session', 'contract_type'])
+
+  var filterChoiceOptions = buildFilterChoiceOptions(
+    dataIndex,
+    {
+      default: {
+        title: function (propertyName) { return val.replace('_', ' '); },
+        isRadio: function (propertyName) { return false },
+        label: function (val) {
+          if (val == null || val == "") {
+            return "(Blank)";
+          }
+          else {
+            return val + ''; // convert any type of string
+          }
+        }
+      },
+      "model_type": {
+        label: function (val) {
+          switch (val) {
+            case "GC":
+              return "";
+            case "":
+              return "";
+            case "":
+              return "";
+            default:
+              return "Others"
+          }
+        }
+      }
+    }
+  );
+
+  loadMap(filterChoiceOptions);
+
+
+  var filterChoiceOptions = [];//
+  // : [
+  //   {
+  //     title: 'Model Type',
+  //     radio: false,
+  //     choices: [          
+  //       {name: 'model_type', values: ['GC'], label: 'Child care'},
+  //       {name: 'model_type', values: ['GD'], label: 'Dual'},
+  //       {name: 'model_type', values: ['GH'], label: 'Headstart'}            
+  //     ]
+  //   },
+  //   {
+  //     title: 'zip',
+  //     radio: false,
+  //     choices:zipFilterArray
+  //   }
+
+
+  console.log(data);
+  if (data == null) {
+    console.log('no data returned');
+
+  }
+  else {
+    var uniqueZips = []
+    for (i = 0; i < data.length; i++) {
+      if (uniqueZips.indexOf(data[i]["zip"]) == -1) {
+        uniqueZips.push(data[i]["zip"]);
+      }
+    }
+
+    for (i = 0; i < uniqueZips.length; i++) {
+      //{name: 'zip', values: ['10456'] ,label: "10456"}          ]
+
+      zipFilterArray.push({ name: 'zip', values: [uniqueZips[i]], label: uniqueZips[i] });
+
+    }
+  }
+  //var uri = 'data:application/csv;charset=UTF-8,' + encodeURIComponent(result);
+  //window.open(uri, 'tiketi.csv');
+
+}
+
+function loadMap(customFilterChoiceOptions) {
+  var myApp = new nyc.ol.FinderApp({
+    title: 'Childcare Providers',
+    splashOptions: { message: 'Put something in here.' },
+    geoclientUrl: 'https://maps.nyc.gov/geoclient/v1/search.json?app_key=74DF5DB1D7320A9A2&app_id=nyc-lib-example',
+    facilityTabTitle: 'Childcare Providers',
+    facilityUrl: DATA_FILE_NAME,
+    facilityFormat: new nyc.ol.format.CsvPoint({
+      x: 'lon',
+      y: 'lat',
+      dataProjection: 'EPSG:4326'
+    }),
+    /*facilityStyle: function(feature, resolution) {
+      var z = nyc.ol.TILE_GRID.getZForResolution(resolution);
+      return new ol.style.Style({
+        image: new ol.style.Icon({
+          src: '../img/' + feature.get('TYPE') + '.png',
+          scale: 24 / 64
+        })
+      });
+    },
+    */
+
+
+    filterChoiceOptions:customFilterChoiceOptions
+     [
+      {
+        title: 'Model Type',
+        radio: false,
+        choices: [
+          { name: 'model_type', values: ['GC'], label: 'Child care' },
+          { name: 'model_type', values: ['GD'], label: 'Dual' },
+          { name: 'model_type', values: ['GH'], label: 'Headstart' }
+        ]
+      },
+      {
+        title: 'zip',
+        radio: false,
+        choices: zipFilterArray
+      }
+
+
+      /*,
+      {
+        title: 'Day Length',
+        choices: [
+          {name: 'DAY_LENGTH', values: ['1', '2', '5', '7'], label: 'Full Day', checked: true},
+                {name: 'DAY_LENGTH', values: ['3', '6', '7'], label: 'Half Day', checked: true},
+                {name: 'DAY_LENGTH', values: ['4', '5', '6', '7'], label: '5-hour', checked: true}
+        ]
+      }*/
+    ],
+    facilitySearch: { nameField: 'name' },
+    decorations: [{
+      extendFeature: function () {
+
+      },
+      getName: function () {
+        return this.get('name');
+      },
+      getAddress: function () {
+        return this.get('address');
+      },
+      getAddress1: function () {
+        return this.getAddress();
+      },
+      getCityStateZip: function () {
+        return '';
+      },
+      getPhone: function () {
+        return this.get('phone');
+      },
+      detailsHtml() {
+        // const detail = this.get(program1.detail)
+        //             if (detail) {
+        //   return $('<div></div>').append(detail)
+
+        //     }
+      }
+      //,
+      // getEmail: function() {
+      //   return this.get('EMAIL');
+      // },
+      // getWebsite: function() {
+      //   return this.get('WEBSITE');
+      // // },
+      // cssClass: function() {
+      //   return this.get('TYPE');
+      // },
+      // detailsHtml: function() {
+      //   return $('<div>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce lobortis, massa id consequat lacinia, massa enim semper nunc, sit amet dapibus ex mi posuere tellus. Aenean vulputate iaculis lorem elementum finibus. Fusce mauris libero, lacinia sed ultricies nec, imperdiet vel diam.</div>');
+      // },
+    }],
+    directionsUrl: 'https://maps.googleapis.com/maps/api/js?client=gme-newyorkcitydepartment&channel=accis&sensor=false&libraries=visualization'
+  });
+
+}
